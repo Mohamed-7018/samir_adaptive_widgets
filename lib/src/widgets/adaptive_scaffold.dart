@@ -484,6 +484,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
       // Priority 2: Build from items
       else {
         bottomNavBar = NavigationBar(
+          height: 160,
           selectedIndex: widget.bottomNavigationBar!.selectedIndex!,
           onDestinationSelected: widget.bottomNavigationBar!.onTap!,
           indicatorColor: widget.bottomNavigationBar!.selectedItemColor,
