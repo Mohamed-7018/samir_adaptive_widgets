@@ -38,14 +38,18 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
   int? _lastUnselectedTint;
   int? _lastBg;
   bool? _lastIsDark;
+  bool? _lastIsRtl;
   double? _intrinsicHeight;
   List<String>? _lastLabels;
   List<String>? _lastSymbols;
+  List<String>? _lastAssetIcons;
   List<int?>? _lastBadgeCounts;
   TabBarMinimizeBehavior? _lastMinimizeBehavior;
 
   bool get _isDark =>
       MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+  bool get _isRtl => Directionality.of(context) == TextDirection.rtl;
+
   Color? get _effectiveTint =>
       widget.tint ?? CupertinoTheme.of(context).primaryColor;
 
@@ -59,6 +63,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncBrightnessIfNeeded();
+    _syncDirectionalityIfNeeded();
     _syncPropsToNativeIfNeeded();
   }
 
@@ -91,7 +96,20 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
       final labels = widget.destinations.map((e) => e.label).toList();
       final symbols = widget.destinations.map((e) {
         final icon = e.icon;
-        if (icon is String) return icon;
+        if (icon is String && !icon.contains('/')) return icon;
+        return '';
+      }).toList();
+      
+      final assetIcons = widget.destinations.map((e) {
+        final icon = e.icon;
+        if (icon is AssetImage) return icon.assetName;
+        if (icon is ImageIcon && icon.image is AssetImage) {
+           return (icon.image as AssetImage).assetName;
+        }
+        if (icon is Image && icon.image is AssetImage) {
+           return (icon.image as AssetImage).assetName;
+        }
+        if (icon is String && icon.contains('/')) return icon;
         return '';
       }).toList();
 
@@ -104,11 +122,13 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
       final creationParams = <String, dynamic>{
         'labels': labels,
         'sfSymbols': symbols,
+        'assetIcons': assetIcons,
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
         'spacerFlags': spacerFlags,
         'selectedIndex': widget.selectedIndex,
         'isDark': _isDark,
+        'isRtl': _isRtl,
         'minimizeBehavior': widget.minimizeBehavior.index,
         if (_effectiveTint != null) 'tint': _colorToARGB(_effectiveTint!),
         if (widget.unselectedItemTint != null)
@@ -185,6 +205,7 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
         ? _colorToARGB(widget.backgroundColor!)
         : null;
     _lastIsDark = _isDark;
+    _lastIsRtl = _isRtl;
     _lastMinimizeBehavior = widget.minimizeBehavior;
     _requestIntrinsicSize();
     _cacheItems();
@@ -241,23 +262,38 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     final labels = widget.destinations.map((e) => e.label).toList();
     final symbols = widget.destinations.map((e) {
       final icon = e.icon;
-      if (icon is String) return icon;
+      if (icon is String && !icon.contains('/')) return icon;
+      return '';
+    }).toList();
+    final assetIcons = widget.destinations.map((e) {
+      final icon = e.icon;
+      if (icon is AssetImage) return icon.assetName;
+      if (icon is ImageIcon && icon.image is AssetImage) {
+         return (icon.image as AssetImage).assetName;
+      }
+      if (icon is Image && icon.image is AssetImage) {
+         return (icon.image as AssetImage).assetName;
+      }
+      if (icon is String && icon.contains('/')) return icon;
       return '';
     }).toList();
     final searchFlags = widget.destinations.map((e) => e.isSearch).toList();
     final badgeCounts = widget.destinations.map((e) => e.badgeCount).toList();
 
     if (_lastLabels?.join('|') != labels.join('|') ||
-        _lastSymbols?.join('|') != symbols.join('|')) {
+        _lastSymbols?.join('|') != symbols.join('|') ||
+        _lastAssetIcons?.join('|') != assetIcons.join('|')) {
       await ch.invokeMethod('setItems', {
         'labels': labels,
         'sfSymbols': symbols,
+        'assetIcons': assetIcons,
         'searchFlags': searchFlags,
         'badgeCounts': badgeCounts,
         'selectedIndex': widget.selectedIndex,
       });
       _lastLabels = labels;
       _lastSymbols = symbols;
+      _lastAssetIcons = assetIcons;
       _requestIntrinsicSize();
     }
 
@@ -291,11 +327,33 @@ class _IOS26NativeTabBarState extends State<IOS26NativeTabBar> {
     }
   }
 
+  Future<void> _syncDirectionalityIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+    final isRtl = _isRtl;
+    if (_lastIsRtl != isRtl) {
+      await ch.invokeMethod('setDirectionality', {'isRtl': isRtl});
+      _lastIsRtl = isRtl;
+    }
+  }
+
   void _cacheItems() {
     _lastLabels = widget.destinations.map((e) => e.label).toList();
     _lastSymbols = widget.destinations.map((e) {
       final icon = e.icon;
-      if (icon is String) return icon;
+      if (icon is String && !icon.contains('/')) return icon;
+      return '';
+    }).toList();
+    _lastAssetIcons = widget.destinations.map((e) {
+      final icon = e.icon;
+      if (icon is AssetImage) return icon.assetName;
+      if (icon is ImageIcon && icon.image is AssetImage) {
+         return (icon.image as AssetImage).assetName;
+      }
+      if (icon is Image && icon.image is AssetImage) {
+         return (icon.image as AssetImage).assetName;
+      }
+      if (icon is String && icon.contains('/')) return icon;
       return '';
     }).toList();
     _lastBadgeCounts = widget.destinations.map((e) => e.badgeCount).toList();
